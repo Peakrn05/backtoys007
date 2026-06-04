@@ -5,10 +5,10 @@ info:
 
 http:
   method: GET
-  url: http://localhost:3001/api/products?search=piano
+  url: http://localhost:3001/api/products?search=la
   params:
     - name: search
-      value: piano
+      value: la
       type: query
   auth: inherit
 
