@@ -6,20 +6,22 @@ export class ProductsController {
   constructor(private readonly productsService: ProductsService) {}
 
   @Get()
-  findAll(
+  async findAll(
     @Query('category') category?: string,
     @Query('ageGroup') ageGroup?: string,
     @Query('badge') badge?: string,
     @Query('search') search?: string,
     @Query('inStock') inStock?: string,
   ) {
-    return this.productsService.findAll({
+    const tresult =  this.productsService.findAll({
       category,
       ageGroup,
       badge,
       search,
       inStock,
-    });
+    })
+    console.log("tresult", await tresult)
+    return tresult;
   }
 
   @Get(':id')

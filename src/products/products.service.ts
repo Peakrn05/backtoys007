@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, SelectQueryBuilder } from 'typeorm';
 import { Product } from './product.entity';
 
 @Injectable()
@@ -8,7 +8,7 @@ export class ProductsService {
   constructor(
     @InjectRepository(Product)
     private readonly productRepo: Repository<Product>,
-  ) {}
+  ) { }
 
   async findAll(query: {
     category?: string;
@@ -28,7 +28,7 @@ export class ProductsService {
     if (query.badge) {
       qb.andWhere('p.badge = :badge', { badge: query.badge });
     }
-    if (query.inStock !== undefined) {
+    if (query.inStock) {
       qb.andWhere('p.inStock = :inStock', {
         inStock: query.inStock === 'true',
       });
@@ -36,8 +36,38 @@ export class ProductsService {
     if (query.search) {
       qb.andWhere('p.name ILIKE :search', { search: `%${query.search}%` });
     }
+    const result = await qb.getMany()
+    console.log("Query", this.getFullQuery(qb))
+    const edit = result.map(row => ({ ...row, pricetag: row.name + " -- " + row.price }))
+    console.log("edit", edit)
+    return edit;
+  }
 
-    return qb.getMany();
+  private getFullQuery(qb: SelectQueryBuilder<any>): string {
+    let sql = qb.getSql();
+    const params = qb.getParameters();
+
+    // สำคัญ: TypeORM ใช้ $1, $2, $3...
+    Object.keys(params).forEach((key, index) => {
+      const paramKey = `$${index + 1}`;           // $1, $2, $3 ...
+      let value = params[key];
+
+      if (value === null || value === undefined) {
+        value = 'NULL';
+      } else if (typeof value === 'string') {
+        value = `'${value.replace(/'/g, "''")}'`;   // escape single quote
+      } else if (value instanceof Date) {
+        value = `'${value.toISOString()}'`;
+      } else if (Array.isArray(value)) {
+        value = `(${value.map(v => `'${v}'`).join(', ')})`;
+      } else {
+        value = String(value);
+      }
+
+      sql = sql.replace(new RegExp(`\\$${index + 1}\\b`, 'g'), value as string);
+    });
+
+    return sql;
   }
 
   async findOne(id: string) {
